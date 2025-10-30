@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display.swap" rel="stylesheet">
+    <title>AI Story to Video Generator</title>
+    <style>
+        /* All UI styles are included here */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #000; color: #fff; min-height: 100vh; line-height: 1.6; padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; padding: 40px; }
+        .header { margin-bottom: 28px; text-align: center; }
+        .header h1 { font-size: 2.5em; font-weight: 700; letter-spacing: -1px; margin-bottom: 15px; }
+        .header p { font-size: 1.05em; color: #9a9a9a; font-weight: 300; max-width: 600px; margin: 0 auto; }
+        .controls-grid { display: grid; grid-template-columns: 1fr; gap: 18px; margin-bottom: 20px; }
+        .control-group { background: #0a0a0a; padding: 22px; border-radius: 10px; border: 1px solid #222; }
+        .control-group label { display: block; font-weight: 600; color: #ccc; margin-bottom: 12px; font-size: 1em; }
+        .file-input-wrapper { position: relative; display: block; }
+        .file-input-button { background: #222; color: #ccc; border: 1px solid #333; padding: 12px 18px; border-radius: 8px; cursor: pointer; font-weight: 500; text-align: center; transition: all 0.2s ease; }
+        .file-input-wrapper:hover .file-input-button { background: #333; border-color: #444; }
+        .file-input-wrapper input[type="file"] { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+        .file-count-label { margin-top: 10px; font-size: 0.85em; color: #888; text-align: center; }
+        textarea { width: 100%; padding: 12px; border: 1px solid #222; border-radius: 8px; font-size: 1em; background: #111; color: #fff; transition: all 0.3s ease; resize: vertical; min-height: 150px; font-family: inherit; }
+        textarea:focus { outline: none; border-color: #6b9cff; background: #151515; }
+        .generate-btn { background: #6b9cff; color: #fff; border: none; padding: 15px 25px; font-size: 1.05em; border-radius: 8px; cursor: pointer; font-weight: 700; transition: all 0.16s; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; margin-top: 20px; }
+        .generate-btn:hover:not(:disabled) { background: #5a8cff; }
+        .generate-btn:disabled { opacity: 0.6; cursor: not-allowed; background: #3f6fbf; }
+        #status { text-align: center; font-weight: 500; color: #9fc7ff; min-height: 24px; margin-top: 20px; }
+        .result-section { margin-top: 30px; display: none; }
+        .result-section h2 { text-align: center; font-size: 1.5em; font-weight: 600; margin-bottom: 20px; }
+        video { width: 100%; max-width: 800px; border-radius: 10px; border: 1px solid #222; background: #050505; }
+        .download-btn { background: #28a745; color: #fff; border: none; padding: 15px 25px; font-size: 1.05em; border-radius: 8px; cursor: pointer; font-weight: 700; transition: all 0.16s; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; margin: 20px auto 0 auto; max-width: 300px; text-decoration: none; }
+        .download-btn:hover { background: #218838; }
+        .spinner { border: 3px solid rgba(255,255,255,0.1); border-top: 3px solid #6b9cff; border-radius: 50%; width: 20px; height: 20px; animation: spin 0.8s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="header">
+            <h1>Hybrid Cloud Video Generator</h1>
+            <p>Write a script, upload images, and let a Cloudflare Worker generate the voice-over for your video.</p>
+        </div>
+        <div class="controls-grid">
+            <div class="control-group">
+                <label for="image-input">1. Upload Your Images (in story order)</label>
+                <div class="file-input-wrapper">
+                    <div class="file-input-button">Select Images</div>
+                    <input type="file" id="image-input" multiple accept="image/jpeg,image/png,image/webp">
+                </div>
+                <div class="file-count-label" id="image-count-label">No files selected</div>
+            </div>
+            <div class="control-group">
+                <label for="script-input">2. Paste Your Story Script</label>
+                <textarea id="script-input" placeholder="The AI will generate a voice-over from this text..."></textarea>
+            </div>
+        </div>
+        <button class="generate-btn" id="generate-btn">🎬 Create My Video</button>
+        <div id="status"></div>
+        <div class="result-section" id="video-output">
+            <h2>Your Video is Ready!</h2>
+            <video id="video-player" controls></video>
+            <a id="download-link" href="#" download="story_video.mp4" class="download-btn">💾 Download Video</a>
+        </div>
+    </div>
+
+    <script src="ffmpeg.min.js"></script>
+    <script>
+        const WORKER_URL = 'https://tts-proxy.singharyan78806.workers.dev/'; 
+
+        const { createFFmpeg, fetchFile } = FFmpeg;
+        const ffmpeg = createFFmpeg({ log: true, corePath: 'ffmpeg-core.js' });
+
+        const imageInput = document.getElementById('image-input');
+        const scriptInput = document.getElementById('script-input');
+        const generateBtn = document.getElementById('generate-btn');
+        const statusEl = document.getElementById('status');
+        const videoOutput = document.getElementById('video-output');
+        const videoPlayer = document.getElementById('video-player');
+        const downloadLink = document.getElementById('download-link');
+        const imageCountLabel = document.getElementById('image-count-label');
+        let isGenerating = false;
+
+        imageInput.addEventListener('change', () => { const count = imageInput.files.length; imageCountLabel.textContent = `${count} file${count === 1 ? '' : 's'} selected`; });
+
+        generateBtn.addEventListener('click', async () => { 
+            if (isGenerating) return; 
+            const images = imageInput.files; 
+            const script = scriptInput.value.trim(); 
+            if (images.length === 0 || script === "") { return alert("Please upload images and provide a script."); } 
+            isGenerating = true; 
+            const originalButtonContent = generateBtn.innerHTML; 
+            generateBtn.innerHTML = `<div class="spinner"></div> Generating...`; 
+            generateBtn.disabled = true; 
+            videoOutput.style.display = 'none'; 
+            statusEl.textContent = 'Starting process...'; 
+            try { 
+                statusEl.textContent = 'Step 1/4: Requesting voice-over from Cloudflare...'; 
+                const audioBlob = await generateAudioFromText(script); 
+                statusEl.textContent = 'Step 2/4: Loading video encoder (FFmpeg)...'; 
+                if (!ffmpeg.isLoaded()) { await ffmpeg.load(); } 
+                statusEl.textContent = 'Step 3/4: Assembling video... This may take a moment.'; 
+                const videoData = await createVideoWithFFmpeg(images, audioBlob); 
+                statusEl.textContent = 'Step 4/4: Finalizing your video file...'; 
+                const videoBlob = new Blob([videoData.buffer], { type: 'video/mp4' }); 
+                const videoUrl = URL.createObjectURL(videoBlob); 
+                videoPlayer.src = videoUrl; 
+                downloadLink.href = videoUrl; 
+                videoOutput.style.display = 'block'; 
+                statusEl.textContent = '✅ Video generation complete!'; 
+            } catch (error) { 
+                console.error('An error occurred during video generation:', error); 
+                statusEl.textContent = `Error: ${error.message}. Check console (F12) for details.`; 
+            } finally { 
+                isGenerating = false; 
+                generateBtn.innerHTML = originalButtonContent; 
+                generateBtn.disabled = false; 
+            } 
+        });
+        
+        async function generateAudioFromText(text) {
+            if (WORKER_URL === 'PASTE_YOUR_WORKER_URL_HERE') {
+                throw new Error("Please paste your Cloudflare Worker URL into the script.");
+            }
+            const response = await fetch(WORKER_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: text }),
+            });
+            if (!response.ok) {
+                throw new Error('Failed to generate audio via Cloudflare Worker.');
+            }
+            return await response.blob();
+        }
+        
+        async function createVideoWithFFmpeg(images, audioBlob) { 
+            for (let i = 0; i < images.length; i++) { 
+                ffmpeg.FS('writeFile', `image${i}.jpg`, await fetchFile(images[i])); 
+            } 
+            ffmpeg.FS('writeFile', 'audio.mp3', await fetchFile(audioBlob)); 
+            let audioDuration = 0; 
+            ffmpeg.setLogger(({ type, message }) => { 
+                if (type === 'fferr' && message.includes('Duration:')) { 
+                    const match = message.match(/Duration: (\d{2}):(\d{2}):(\d{2})\.(\d{2})/); 
+                    if (match) { 
+                        const hours = parseInt(match[1]); 
+                        const minutes = parseInt(match[2]); 
+                        const seconds = parseInt(match[3]); 
+                        const centiseconds = parseInt(match[4]); 
+                        audioDuration = (hours * 3600) + (minutes * 60) + seconds + (centiseconds / 100); 
+                    } 
+                } 
+            }); 
+            await ffmpeg.run('-i', 'audio.mp3', '-f', 'null', '-'); 
+            
+            // ===================================================================
+            // THE ONLY CHANGE IS HERE: We safely reset the logger.
+            // ===================================================================
+            ffmpeg.setLogger(() => {}); // Set a blank logger instead of null
+
+            if (audioDuration === 0) { 
+                throw new Error("Could not determine audio duration. The audio file might be corrupt."); 
+            } 
+            const imageDuration = audioDuration / images.length; 
+            await ffmpeg.run( '-framerate', `${1 / imageDuration}`, '-i', 'image%d.jpg', '-i', 'audio.mp3', '-c:v', 'libx264', '-c:a', 'aac', '-b:a', '192k', '-pix_fmt', 'yuv420p', '-vf', 'scale=1280:-2', '-t', `${audioDuration}`, 'output.mp4' ); 
+            return ffmpeg.FS('readFile', 'output.mp4'); 
+        }
+
+    </script>
+</body>
+</html>
+
