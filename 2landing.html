@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Poppins:wght@300&display=swap" rel="stylesheet">
+    
+    <title>Story Llama - Weave Your Photos into a Narrative</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background-color: #000;
+            color: #fff;
+            min-height: 100vh;
+            line-height: 1.6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            background-image: url('llama_outline.png');
+            background-size: 85vh;
+            background-position: center center;
+            background-repeat: no-repeat;
+            filter: invert(1);
+            opacity: 0.12; 
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px;
+            position: relative;
+            z-index: 2;
+        }
+        
+        .landing-content h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 10.1em;
+            font-weight: 700;
+            letter-spacing: -1.5px;
+            margin-bottom: 5px;
+            background: linear-gradient(180deg, #ffffff, #c2c2c2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .landing-content p {
+            font-size: 1.65em;
+            color: #a3a3a3;
+            font-weight: 300;
+            max-width: 700px;
+            letter-spacing: 2.5px;
+            margin: 0 auto 90px auto;
+        }
+        
+        /* --- MODIFICATION 1: Base button state prepared for animation --- */
+        .btn {
+            background: #fff;
+            color: #000;
+            /* Add a transparent border to prevent size jump on hover */
+            border: 2px solid transparent;
+            /* Adjust padding to account for the new border width */
+            padding: 14px 66px; 
+            font-size: 1.1em;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            border-radius: 12px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            /* Updated transition for a smooth, aesthetic animation on all properties */
+            transition: transform 0.3s ease, background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+        }
+        
+        /* --- MODIFICATION 2: New hover effect with inverted colors and animation --- */
+        .btn:hover {
+            /* Invert the colors */
+            background-color: transparent;
+            color: #fff;
+            /* Make the border visible */
+            border-color: #fff;
+
+            /* Add a subtle lift animation */
+            transform: translateY(-5px);
+        }
+        
+        @media (max-width: 720px) {
+            body::before {
+                background-size: 95vw;
+            }
+            .landing-content h1 {
+                font-size: 5.5em;
+                letter-spacing: -1px;
+            }
+            .landing-content p {
+                font-size: 1.2em;
+                letter-spacing: 1.5px;
+                max-width: 90vw;
+            }
+            .btn {
+                padding: 12px 43px; /* Adjusted for mobile */
+                font-size: 1em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="landing-content">
+            <h1>Story Llama</h1>
+            <!-- The user's last edit to the tagline is preserved here -->
+            <p style="letter-spacing: 9px;">WEAVE YOUR PHOTOS INTO A NARRATIVE</p>
+            <a href="ai_studio_code.html" class="btn">Continue</a>
+        </div>
+    </div>
+</body>
+</html>
