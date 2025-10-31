@@ -1,4 +1,4 @@
-# AI Caption Generator - Project Context & Implementation Guide
+# StoryLlama - Project Context & Implementation Guide
 
 ## Project Overview
 Build a highly personalized AI-powered caption generator that combines ML-based image understanding with LLM-powered content generation. The system analyzes images, extracts keywords, and generates customized captions, stories, and poems based on user preferences.
